@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const { v4: uuidv4 } = require('uuid');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
@@ -11,6 +12,9 @@ const io = socketIo(server, {
         methods: ['GET', 'POST']
     }
 });
+
+// Обслуживание статических файлов из директории frontend/build
+app.use(express.static(path.join(__dirname, '../frontend/build')));
 
 let rooms = {};
 
@@ -73,6 +77,11 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log('Клиент отключен');
     });
+});
+
+
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
 });
 
 server.listen(3000, () => console.log('Сервер запущен на порту 3000'));

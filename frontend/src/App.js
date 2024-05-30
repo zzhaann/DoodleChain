@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
+import CanvasComponent from './CanvasComponent';
 
 const socket = io('http://localhost:3000');
 
@@ -8,7 +9,6 @@ function App() {
     const [roomId, setRoomId] = useState('');
     const [isInRoom, setIsInRoom] = useState(false);
     const [task, setTask] = useState('');
-    const [drawing, setDrawing] = useState('');
     const [results, setResults] = useState(null);
 
     useEffect(() => {
@@ -53,7 +53,7 @@ function App() {
         socket.emit('submitTask', { roomId, task });
     };
 
-    const submitDrawing = () => {
+    const submitDrawing = (drawing) => {
         socket.emit('submitDrawing', { roomId, drawing });
     };
 
@@ -94,33 +94,25 @@ function App() {
                         placeholder="Введите задание"
                     />
                     <button onClick={submitTask}>Отправить задание</button>
-                    <input
-                        type="text"
-                        value={drawing}
-                        onChange={(e) => setDrawing(e.target.value)}
-                        placeholder="Введите рисунок"
-                    />
-                    <button onClick={submitDrawing}>Отправить рисунок</button>
+                    <CanvasComponent onSave={submitDrawing} />
                     <button onClick={getResults}>Получить результаты</button>
                     {results && (
                         <div>
-                            <h3>Результаты:</h3>
-                            <div>
-                                <h4>Задания:</h4>
-                                <ul>
-                                    {results.tasks.map((task, index) => (
-                                        <li key={index}>{task}</li>
-                                    ))}
-                                </ul>
-                            </div>
-                            <div>
-                                <h4>Рисунки:</h4>
-                                <ul>
-                                    {results.drawings.map((drawing, index) => (
-                                        <li key={index}>{drawing}</li>
-                                    ))}
-                                </ul>
-                            </div>
+                            <h2>Результаты</h2>
+                            <p>Задания:</p>
+                            <ul>
+                                {results.tasks.map((t, index) => (
+                                    <li key={index}>{t}</li>
+                                ))}
+                            </ul>
+                            <p>Рисунки:</p>
+                            <ul>
+                                {results.drawings.map((d, index) => (
+                                    <li key={index}>
+                                        <img src={d} alt={`Drawing ${index}`} />
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
                     )}
                 </div>
