@@ -1,23 +1,132 @@
-import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import Home from './components/Home';
-import Room from './components/Room';
-import DrawingCanvas from './components/DrawingCanvas';
-import Results from './components/Results';
+import React, { useState, useEffect } from 'react';
+import io from 'socket.io-client';
+
+const socket = io('http://localhost:3000');
 
 function App() {
-  return (
-    <Router>
-      <div>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/room/:roomId" element={<Room />} />
-          <Route path="/task/:taskId" element={<DrawingCanvas />} />
-          <Route path="/room/:roomId/results" element={<Results />} />
-        </Routes>
-      </div>
-    </Router>
-  );
+    const [name, setName] = useState('');
+    const [roomId, setRoomId] = useState('');
+    const [isInRoom, setIsInRoom] = useState(false);
+    const [task, setTask] = useState('');
+    const [drawing, setDrawing] = useState('');
+    const [results, setResults] = useState(null);
+
+    useEffect(() => {
+        socket.on('connect', () => {
+            console.log('Connected to server');
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+        });
+
+        return () => {
+            socket.off('connect');
+            socket.off('disconnect');
+        };
+    }, []);
+
+    const createRoom = () => {
+        socket.emit('createRoom', (roomId) => {
+            console.log(`Room created with ID: ${roomId}`);
+            setRoomId(roomId);
+            setIsInRoom(true);
+        });
+    };
+
+    const joinRoom = () => {
+        socket.emit('joinRoom', { roomId, participant: name }, (response) => {
+            if (response.success) {
+                console.log('Successfully joined the room');
+                setIsInRoom(true);
+            } else {
+                alert(response.message);
+            }
+        });
+    };
+
+    const startGame = () => {
+        socket.emit('startGame', { roomId });
+    };
+
+    const submitTask = () => {
+        socket.emit('submitTask', { roomId, task });
+    };
+
+    const submitDrawing = () => {
+        socket.emit('submitDrawing', { roomId, drawing });
+    };
+
+    const getResults = () => {
+        socket.emit('getResults', { roomId }, (results) => {
+            setResults(results);
+            console.log(results);
+        });
+    };
+
+    return (
+        <div>
+            {!isInRoom ? (
+                <div>
+                    <input
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Введите ваше имя"
+                    />
+                    <button onClick={createRoom}>Создать комнату</button>
+                    <input
+                        type="text"
+                        value={roomId}
+                        onChange={(e) => setRoomId(e.target.value)}
+                        placeholder="Код комнаты"
+                    />
+                    <button onClick={joinRoom}>Присоединиться к комнате</button>
+                </div>
+            ) : (
+                <div>
+                    <p>Комната: {roomId}</p>
+                    <button onClick={startGame}>Начать игру</button>
+                    <input
+                        type="text"
+                        value={task}
+                        onChange={(e) => setTask(e.target.value)}
+                        placeholder="Введите задание"
+                    />
+                    <button onClick={submitTask}>Отправить задание</button>
+                    <input
+                        type="text"
+                        value={drawing}
+                        onChange={(e) => setDrawing(e.target.value)}
+                        placeholder="Введите рисунок"
+                    />
+                    <button onClick={submitDrawing}>Отправить рисунок</button>
+                    <button onClick={getResults}>Получить результаты</button>
+                    {results && (
+                        <div>
+                            <h3>Результаты:</h3>
+                            <div>
+                                <h4>Задания:</h4>
+                                <ul>
+                                    {results.tasks.map((task, index) => (
+                                        <li key={index}>{task}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                            <div>
+                                <h4>Рисунки:</h4>
+                                <ul>
+                                    {results.drawings.map((drawing, index) => (
+                                        <li key={index}>{drawing}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
 }
 
 export default App;
